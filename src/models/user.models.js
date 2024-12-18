@@ -16,7 +16,9 @@ const userSchema = new Schema({
 }, {timestamps: true})
 
 
-// hooks
+// hooks -> pre hook
+// flag (middleware) -> next() call
+// next() tells Mongoose to continue with the document save operation after your custom logic (like hashing the password) has completed.
 userSchema.pre("save", async function(next) {
 
     if(!this.isModified('password')) return next();
@@ -26,9 +28,23 @@ userSchema.pre("save", async function(next) {
 })
 
 // methods
-// next() tells Mongoose to continue with the document save operation after your custom logic (like hashing the password) has completed.
 userSchema.methods.isPasswordCorrect = async function(password){
     return await bcrypt.compare(password, this.password)
+}
+
+userSchema.method.generateRefreshToken = function(){
+    return jwt.sign({
+        _id: this._id,
+        email: this.email,
+        userName: this.userName,
+        fullName: this.fullName
+    }, process.env.ACCESS_TOKEN_SECRET, {expiresIn: process.env.ACCESS_TOKEN_EXPIRY})
+}
+
+userSchema.methods.generateAccessToken = function(){
+    return jwt.sign({
+        _id: this._id
+    }, process.env.REFRESH_TOKEN_SECRET, {expiresIn: process.env.REFRESH_TOKEN_EXPIRY})
 }
 
 export const User = mongoose.model("User", userSchema);
